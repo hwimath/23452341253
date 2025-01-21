@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>여러 가지 일차 부등식의 풀이 (문제 72~120)</title>
+
+  <!-- MathJax 로드 (LaTeX 렌더링) -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+
+  <style>
+    body {
+      font-family: '맑은 고딕', sans-serif;
+      margin: 30px;
+      line-height: 1.6;
+    }
+    h1, h2, h3 {
+      margin-bottom: 1rem;
+    }
+    .hidden {
+      display: none;
+    }
+    .center {
+      text-align: center;
+    }
+    /* 난이도 선택 등 초기화면 */
+    #start-screen, #quiz-screen, #end-screen {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    /* 에너지바 */
+    #energy-bar-container {
+      width: 100%;
+      height: 20px;
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin: 10px 0;
+      overflow: hidden;
+      position: relative;
+    }
+    #energy-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #ff9999, #ff0000);
+      width: 100%;
+      transition: width 0.2s linear;
+    }
+    /* 보기 선택 */
+    .option-btn {
+      display: block;
+      margin: 8px 0;
+      padding: 8px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .option-btn:hover {
+      background: #eaeaea;
+    }
+    /* 전체 게임 시간 표시 */
+    #total-time {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    /* 정답/오답 표시 */
+    #feedback {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    /* 남은 기회 */
+    #chances {
+      font-weight: bold;
+      margin-left: 20px;
+    }
+    /* 점수 */
+    #score-span {
+      font-weight: bold;
+      margin-left: 20px;
+    }
+    /* 서버 응답 영역 */
+    #response {
+      white-space: pre-wrap;
+      margin-top: 10px;
+      color: #333;
+      background: #fafafa;
+      border: 1px dashed #ccc;
+      padding: 10px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>여러 가지 일차 부등식의 풀이 (문제 72 ~ 120)</h1>
+
+<div id="start-screen">
+  <h2>게임 시작</h2>
+  <p>이름을 입력하고 난이도를 선택하세요.</p>
+  <div>
+    <label for="playerName">이름: </label>
+    <input type="text" id="playerName" placeholder="이름 입력" />
+  </div>
+  <div style="margin-top:10px;">
+    <label>난이도 선택: </label>
+    <select id="difficultySelect">
+      <option value="최상">최상 (20초/문제, +20점)</option>
+      <option value="상">상 (30초/문제, +15점)</option>
+      <option value="중">중 (40초/문제, +13점)</option>
+      <option value="하">하 (시간제한 없음, +10점)</option>
+    </select>
+  </div>
+  <button style="margin-top:20px; padding:10px 20px;" onclick="startGame()">시작하기</button>
+</div>
+
+<div id="quiz-screen" class="hidden">
+  <h2>문제 풀기</h2>
+  
+  <!-- 상단 정보 -->
+  <div>
+    <span id="score-span">점수: 0</span>
+    <span id="chances">남은 기회: 3</span>
+    <span id="total-time">전체 진행 시간: 0초</span>
+  </div>
+
+  <!-- 문제 표시 영역 -->
+  <div id="question-container" style="margin-top:20px;">
+    <div id="problem-text" style="font-size:1.1rem; margin-bottom:15px;"></div>
+
+    <!-- 보기(4지선다) 버튼 -->
+    <div id="options-container"></div>
+
+    <!-- 피드백(정답/오답) -->
+    <div id="feedback"></div>
+  </div>
+
+  <!-- 에너지바 (시간제한 시각화) -->
+  <div id="energy-bar-container" class="hidden">
+    <div id="energy-bar"></div>
+  </div>
+</div>
+
+<div id="end-screen" class="hidden center">
+  <h2 id="end-message">게임 종료</h2>
+  <p>최종 점수: <span id="final-score"></span></p>
+  <p>총 소요 시간: <span id="final-time"></span></p>
+
+  <!-- 점수 전송 영역 -->
+  <button onclick="sendScore()" style="margin:10px 0;padding:8px 16px;">점수 전송</button>
+  <div id="response"></div>
+</div>
+
+<script>
+/* 
+  ============================================
+  1) 문제 데이터 (72~120, 107 제외)
+  ============================================
+  각 문제를 객체 형태:
+    {
+      question: "질문(LaTeX 가능)",
+      answers: ["보기1", "보기2", "보기3", "보기4"],
+      correctIndex: 정답인 보기의 인덱스(0~3)
+    }
+  수식은 \\(...\\) 형태로 작성.
+*/
+const PROBLEMS = [
+  // 72
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\(2x + 3(x+1) \\ge -7\\)<br>2) \\(3x - 4 \\ge x - a\\)",
+    answers: ["3", "5", "8", "10"],
+    correctIndex: 2  // 정답: 8
+  },
+  // 73
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\(x + 5 < 8\\)<br>2) \\(3x + a > 4x\\)",
+    answers: ["3", "4", "5", "-3"],
+    correctIndex: 0  // 정답: 3 (1번째 보기)
+  },
+  // 74
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\(x - 2 \\ge 7\\)<br>2) \\(5 - 6x \\ge a - 7x\\)",
+    answers: ["9", "12", "14", "16"],
+    correctIndex: 2  // 14
+  },
+  // 75
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\(x - 3 > 4\\)<br>2) \\(2 - 3x > a - 4x\\)",
+    answers: ["7", "8", "9", "10"],
+    correctIndex: 2  // 9
+  },
+  // 76
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\(x + 4 > 8\\)<br>2) \\(5x - 3 > 3x + a\\)",
+    answers: ["1", "5", "7", "9"],
+    correctIndex: 1  // 5
+  },
+  // 77
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\(x - 1 \\le 4\\)<br>2) \\(2x + a \\ge 5x\\)",
+    answers: ["3", "5", "10", "15"],
+    correctIndex: 3  // 15
+  },
+  // 78
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\((x - a)/2 \\le 1\\)<br>2) \\(-(2x - 9) \\ge x - 6\\)",
+    answers: ["1", "2", "3", "5"],
+    correctIndex: 2  // 3
+  },
+  // 79
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\(0.5x + 1 > 0.3x + 0.8\\)<br>2) \\(6x + a > 3(x + 2)\\)",
+    answers: ["7", "8", "9", "10"],
+    correctIndex: 2  // 9
+  },
+  // 80
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\(0.5(x + a) \\le 6\\)<br>2) \\(3x - a \\le 2x\\)",
+    answers: ["4", "5", "6", "8"],
+    correctIndex: 2  // 6
+  },
+  // 81
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\((x - 2)/4 > (2x + 1)/3\\)<br>2) \\(x + a < -x + 6\\)",
+    answers: ["8", "9", "10", "12"],
+    correctIndex: 2  // 10
+  },
+  // 82
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\((x - 1)/2 \\ge (4x + 1)/3\\)<br>2) \\(2(2x - 5) \\le a + x\\)",
+    answers: ["-15", "-13", "-10", "0"],
+    correctIndex: 1  // -13
+  },
+  // 83
+  {
+    question: "두 부등식의 해가 같도록 하는 상수 a를 구하시오.<br>1) \\((x - 5)/2 < (2x - 1)/3\\)<br>2) \\(x + a > -x + 5\\)",
+    answers: ["13", "31", "-13", "-31"],
+    correctIndex: 1  // 31
+  },
+
+  /* 84~88: a>0 */
+  {
+    question: "부등식 \\(ax > 1\\) 의 해를 구하시오. (단, \\(a > 0\\))",
+    answers: [
+      "\\(x > \\frac{1}{a}\\)",
+      "\\(x < \\frac{1}{a}\\)",
+      "\\(x > a - 1\\)",
+      "\\(x < a - 1\\)"
+    ],
+    correctIndex: 0
+  },
+  {
+    question: "부등식 \\(ax > a\\) 의 해를 구하시오. (\\(a>0\\))",
+    answers: [
+      "\\(x > 1\\)",
+      "\\(x < 1\\)",
+      "\\(x > \\frac{1}{a}\\)",
+      "\\(x < \\frac{1}{a}\\)"
+    ],
+    correctIndex: 0
+  },
+  {
+    question: "부등식 \\(-ax - 1 \\ge 6\\) 의 해를 구하시오. (\\(a>0\\))",
+    answers: [
+      "\\(x \\ge -\\frac{7}{a}\\)",
+      "\\(x \\le -\\frac{7}{a}\\)",
+      "\\(x \\ge \\frac{7}{a}\\)",
+      "\\(x \\le \\frac{7}{a}\\)"
+    ],
+    correctIndex: 1
+  },
+  {
+    question: "부등식 \\(7ax - 10 \\ge 4ax + 5\\) 의 해를 구하시오. (\\(a>0\\))",
+    answers: [
+      "\\(x \\ge \\frac{5}{a}\\)",
+      "\\(x \\le \\frac{5}{a}\\)",
+      "\\(x \\ge \\frac{15}{a}\\)",
+      "\\(x \\le \\frac{15}{a}\\)"
+    ],
+    correctIndex: 0
+  },
+  {
+    question: "부등식 \\(ax - a < 0\\) 의 해를 구하시오. (\\(a>0\\))",
+    answers: [
+      "\\(x < 0\\)",
+      "\\(x < 1\\)",
+      "\\(x > 0\\)",
+      "\\(x > 1\\)"
+    ],
+    correctIndex: 1
+  },
+
+  /* 89~100: a<0 */
+  {
+    question: "부등식 \\(ax - 1 > 0\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x > \\frac{1}{a}\\)",
+      "\\(x < \\frac{1}{a}\\)",
+      "\\(x > 1\\)",
+      "\\(x < 1\\)"
+    ],
+    correctIndex: 1
+  },
+  {
+    question: "부등식 \\(ax > a\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x > 1\\)",
+      "\\(x < 1\\)",
+      "\\(x > \\frac{a}{a}\\)",
+      "\\(x < \\frac{a}{a}\\)"
+    ],
+    correctIndex: 1
+  },
+  {
+    question: "부등식 \\(ax - a < 0\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x > 1\\)",
+      "\\(x < 1\\)",
+      "\\(x > 0\\)",
+      "\\(x < 0\\)"
+    ],
+    correctIndex: 0
+  },
+  {
+    question: "부등식 \\(ax + 2a < 4a\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x > 2\\)",
+      "\\(x < 2\\)",
+      "\\(x > -2\\)",
+      "\\(x < -2\\)"
+    ],
+    correctIndex: 0
+  },
+  {
+    question: "부등식 \\(ax < 3\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x > \\frac{3}{a}\\)",
+      "\\(x < \\frac{3}{a}\\)",
+      "\\(x > 3 - a\\)",
+      "\\(x < 3 - a\\)"
+    ],
+    correctIndex: 0
+  },
+  {
+    question: "부등식 \\(ax > 2a\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x > 2\\)",
+      "\\(x < 2\\)",
+      "\\(x > \\frac{2}{a}\\)",
+      "\\(x < \\frac{2}{a}\\)"
+    ],
+    correctIndex: 1
+  },
+  {
+    question: "부등식 \\(ax + a > 0\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x > -1\\)",
+      "\\(x < -1\\)",
+      "\\(x > 1\\)",
+      "\\(x < 1\\)"
+    ],
+    correctIndex: 1
+  },
+  {
+    question: "부등식 \\(ax > 4\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x > \\frac{4}{a}\\)",
+      "\\(x < \\frac{4}{a}\\)",
+      "\\(x > 4\\)",
+      "\\(x < 4\\)"
+    ],
+    correctIndex: 1
+  },
+  {
+    question: "부등식 \\(5 - ax < 7\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x < -\\frac{2}{a}\\)",
+      "\\(x > -\\frac{2}{a}\\)",
+      "\\(x < \\frac{2}{a}\\)",
+      "\\(x > \\frac{2}{a}\\)"
+    ],
+    correctIndex: 0
+  },
+  {
+    question: "부등식 \\(3ax + 1 \\le 10\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x \\le \\frac{9}{a}\\)",
+      "\\(x \\ge \\frac{3}{a}\\)",
+      "\\(x \\le 3 - a\\)",
+      "\\(x \\ge 3 - a\\)"
+    ],
+    correctIndex: 1 // 수정: x >= 3/a (a<0)
+  },
+  {
+    question: "부등식 \\(2ax + 3 \\ge -5\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x \\ge -\\frac{4}{a}\\)",
+      "\\(x \\le -\\frac{4}{a}\\)",
+      "\\(x \\ge \\frac{4}{a}\\)",
+      "\\(x \\le \\frac{4}{a}\\)"
+    ],
+    correctIndex: 1 // x <= -4/a
+  },
+  {
+    question: "부등식 \\(-2ax - 1 \\ge ax + 5\\) 의 해를 구하시오. (\\(a<0\\))",
+    answers: [
+      "\\(x \\le -\\frac{2}{a}\\)",
+      "\\(x \\ge -\\frac{2}{a}\\)",
+      "\\(x \\le \\frac{2}{a}\\)",
+      "\\(x \\ge \\frac{2}{a}\\)"
+    ],
+    correctIndex: 1 // x >= -2/a
+  },
+
+  /* III. x >= -2 (101~104) */
+  {
+    question: "부등식 \\(2x + a < 3x\\) 의 해는 \\(x > a\\). 이 해가 \\(x \\ge -2\\)가 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -1",
+      "a = -2",
+      "a = 2",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 1 // a=-2
+  },
+  {
+    question: "부등식 \\(5x - a > 3x + 1\\) 은 \\(x > \\frac{a+1}{2}\\)를 의미한다.<br>이 해가 \\(x \\ge -2\\)가 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -4",
+      "a = -5",
+      "a = 4",
+      "a = 5"
+    ],
+    correctIndex: 1 // a=-5
+  },
+  {
+    question: "부등식 \\(2x + 9 < 5x + 3a\\) 은 \\(x > 3 - a\\)를 의미한다.<br>이 해가 \\(x \\ge -2\\)가 되려면?",
+    answers: [
+      "a = -5",
+      "a = 2",
+      "a = 3",
+      "a = 5"
+    ],
+    correctIndex: 3 // a=5
+  },
+  {
+    question: "부등식 \\(4x - a > 2x + 3a\\) 은 \\(x > 2a\\)를 의미한다.<br>이 해가 \\(x \\ge -2\\)가 되려면?",
+    answers: [
+      "a = -1",
+      "a = 1",
+      "a = 2",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=-1
+  },
+
+  /* IV. 특정 구간 (105~120), 107 제외 */
+  {
+    question: "부등식 \\(ax > 4\\)의 해가 \\(x > 2\\)가 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -2",
+      "a = 2",
+      "a = 4",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 1 // a=2
+  },
+  {
+    question: "부등식 \\(ax > 6\\)의 해가 \\(x \\le -3\\)가 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -2",
+      "a = 2",
+      "a = -1",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=-2
+  },
+  // (107) 제외
+
+  {
+    question: "부등식 \\(ax + 4 < 2\\)의 해가 \\(x > 2\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -1",
+      "a = 1",
+      "a = -2",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=-1
+  },
+  {
+    question: "부등식 \\(ax + 5 \\le 2\\)의 해가 \\(x > 3\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -3",
+      "a = -1",
+      "a = 1",
+      "a = 3"
+    ],
+    correctIndex: 1 // a=-1
+  },
+  {
+    question: "부등식 \\(ax - 6 \\ge 3\\)의 해가 \\(x \\ge 3\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = 1",
+      "a = 2",
+      "a = 3",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 2 // a=3
+  },
+  {
+    question: "부등식 \\(ax + 7 < 2\\)의 해가 \\(x > 1\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -5",
+      "a = -1",
+      "a = 5",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=-5
+  },
+  {
+    question: "부등식 \\(6(x-1)+4 \\le 3x - a\\) 의 해가 \\(x \\le 2\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -4",
+      "a = 4",
+      "a = -2",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=-4
+  },
+  {
+    question: "부등식 \\(ax - 5 \\le 3\\)의 해가 \\(x \\le 4\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = 2",
+      "a = -2",
+      "a = 3",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=2
+  },
+  {
+    question: "부등식 \\(ax + 6 < -8\\)의 해가 \\(x > 7\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -2",
+      "a = 2",
+      "a = -1",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=-2
+  },
+  {
+    question: "부등식 \\(2x - 1 < 3a\\)의 해가 \\(x < 8\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = 5",
+      "a = -5",
+      "a = 8",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=5
+  },
+  {
+    question: "부등식 \\(ax + 1 > 10\\)의 해가 \\(x > 3\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = 3",
+      "a = -3",
+      "a = 9",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=3
+  },
+  {
+    question: "부등식 \\(\\frac{5x - 1}{3} - a \\le x - 5\\)의 해가 \\(x \\le -4\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = 1",
+      "a = 2",
+      "a = -2",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 1 // a=2
+  },
+  {
+    question: "부등식 \\(7(x-2)-3 > 2x - a\\) 의 해가 \\(x > 3\\) 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = 2",
+      "a = -2",
+      "a = 5",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=2
+  },
+  {
+    question: "부등식 \\(ax - 4 \\ge 5\\)는 \\(ax \\ge 9\\)를 의미한다.<br>이 해가 \\(x \\ge 3\\)가 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = 3",
+      "a = -3",
+      "a = 9",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 0 // a=3
+  },
+  {
+    question: "부등식 \\(ax + 8 > 2\\)는 \\(ax > -6\\)을 의미한다.<br>이 해가 \\(x < 2\\)가 되도록 하는 \\(a\\)는?",
+    answers: [
+      "a = -2",
+      "a = -3",
+      "a = 2",
+      "어떤 실수값도 불가능"
+    ],
+    correctIndex: 1 // a=-3
+  }
+];
+
+// ============= 게임 로직 전역 변수들 =============
+let usedIndices = [];        // 이미 출제된 문제 index
+let totalAnswered = 0;       // 푼 문제 수
+let currentProblem = null;   // 현재 문제
+let currentIndex = -1;       
+let score = 0;               // 점수
+let chances = 3;             // 남은 기회
+let difficulty = "상";       
+let nameEntered = "";        
+let timeLimitPerQuestion = 30; // 문제당 제한 시간(초)
+let scorePerQuestion = 15;     // 문제당 점수
+
+// 전체 게임 시간
+let totalTime = 0; 
+let totalTimeInterval = null;
+
+// 문제당 남은 시간
+let questionTime = 0; 
+let questionTimer = null;
+
+// 난이도별 설정
+function setDifficulty(diff) {
+  difficulty = diff;
+  if (diff === "최상") {
+    timeLimitPerQuestion = 20;
+    scorePerQuestion = 20;
+  } else if (diff === "상") {
+    timeLimitPerQuestion = 30;
+    scorePerQuestion = 15;
+  } else if (diff === "중") {
+    timeLimitPerQuestion = 40;
+    scorePerQuestion = 13;
+  } else {
+    // 하
+    timeLimitPerQuestion = Infinity; // 무제한
+    scorePerQuestion = 10;
+  }
+}
+
+// 시작
+function startGame() {
+  const nameField = document.getElementById('playerName');
+  const diffSelect = document.getElementById('difficultySelect');
+
+  if (!nameField.value.trim()) {
+    alert("이름을 입력하세요.");
+    return;
+  }
+  nameEntered = nameField.value.trim();
+  setDifficulty(diffSelect.value);
+
+  // 화면 전환
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('quiz-screen').classList.remove('hidden');
+
+  // 전체 시간 타이머
+  totalTime = 0;
+  totalTimeInterval = setInterval(()=>{
+    totalTime++;
+    document.getElementById('total-time').innerText = "전체 진행 시간: " + totalTime + "초";
+  }, 1000);
+
+  // 첫 문제
+  nextProblem();
+}
+
+// 다음 문제
+function nextProblem() {
+  document.getElementById('feedback').innerText = "";
+  resetEnergyBar();
+
+  // 문제 인덱스 무작위
+  if (usedIndices.length < PROBLEMS.length) {
+    // 아직 중복없는 범위 내
+    currentIndex = pickRandomUniqueIndex();
+  } else {
+    // 전부 소진 후 무한 랜덤
+    currentIndex = Math.floor(Math.random() * PROBLEMS.length);
+  }
+  currentProblem = PROBLEMS[currentIndex];
+  totalAnswered++;
+
+  // 문제/보기 표시
+  document.getElementById('problem-text').innerHTML = currentProblem.question;
+  
+  // 보기 4개를 랜덤 순서로 셔플해서 표시
+  const options = shuffleOptions(currentProblem.answers, currentProblem.correctIndex);
+  const optionsContainer = document.getElementById('options-container');
+  optionsContainer.innerHTML = "";
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = opt.text; // LaTeX 포함 가능
+    btn.onclick = () => checkAnswer(opt.isCorrect);
+    optionsContainer.appendChild(btn);
+  });
+
+  // 수식 렌더링
+  MathJax.typeset();
+
+  // 시간 제한
+  if (timeLimitPerQuestion !== Infinity) {
+    document.getElementById('energy-bar-container').classList.remove('hidden');
+    questionTime = 0;
+    questionTimer = setInterval(()=>{
+      questionTime++;
+      let progress = questionTime / timeLimitPerQuestion;
+      let percent = (1 - progress) * 100; 
+      document.getElementById('energy-bar').style.width = percent + "%";
+      if (progress >= 1) {
+        timeUp();
+      }
+    }, 1000);
+  } else {
+    // 하 난이도 -> 에너지바 숨김
+    document.getElementById('energy-bar-container').classList.add('hidden');
+  }
+}
+
+// 중복 없는 무작위 인덱스
+function pickRandomUniqueIndex() {
+  let candidate = -1;
+  while (true) {
+    candidate = Math.floor(Math.random() * PROBLEMS.length);
+    if (!usedIndices.includes(candidate)) {
+      usedIndices.push(candidate);
+      return candidate;
+    }
+  }
+}
+
+// 보기 셔플
+function shuffleOptions(answersArr, correctIdx) {
+  let result = [];
+  for (let i=0; i<answersArr.length; i++){
+    result.push({
+      text: answersArr[i],
+      isCorrect: (i === correctIdx)
+    });
+  }
+  // Fisher-Yates
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+// 정답 체크
+function checkAnswer(isCorrect) {
+  if (questionTimer) clearInterval(questionTimer);
+
+  if (isCorrect) {
+    score += scorePerQuestion;
+    document.getElementById('score-span').innerText = "점수: " + score;
+    document.getElementById('feedback').innerText = "정답입니다! (+" + scorePerQuestion + "점)";
+  } else {
+    chances--;
+    document.getElementById('chances').innerText = "남은 기회: " + chances;
+    // 정답 알려주기
+    const correctAnsText = currentProblem.answers[currentProblem.correctIndex];
+    document.getElementById('feedback').innerText = "틀렸습니다! 정답은: " + correctAnsText;
+    if (chances <= 0) {
+      gameOver();
+      return;
+    }
+  }
+
+  setTimeout(()=>{
+    nextProblem();
+  }, 1000);
+}
+
+// 시간 초과
+function timeUp() {
+  if (questionTimer) clearInterval(questionTimer);
+  chances--;
+  document.getElementById('chances').innerText = "남은 기회: " + chances;
+
+  const correctAnsText = currentProblem.answers[currentProblem.correctIndex];
+  document.getElementById('feedback').innerText = "시간 초과! 정답은: " + correctAnsText;
+
+  if (chances <= 0) {
+    gameOver();
+    return;
+  }
+  setTimeout(()=>{
+    nextProblem();
+  }, 1000);
+}
+
+function resetEnergyBar() {
+  if (questionTimer) clearInterval(questionTimer);
+  document.getElementById('energy-bar').style.width = "100%";
+}
+
+// 게임 종료
+function gameOver() {
+  if (questionTimer) clearInterval(questionTimer);
+  if (totalTimeInterval) clearInterval(totalTimeInterval);
+
+  document.getElementById('quiz-screen').classList.add('hidden');
+  document.getElementById('end-screen').classList.remove('hidden');
+  
+  document.getElementById('end-message').innerText = "게임 종료!";
+  document.getElementById('final-score').innerText = score;
+  document.getElementById('final-time').innerText = totalTime + "초";
+}
+
+// 점수 전송
+function sendScore() {
+  const gameName = "여러 가지 일차 부등식의 풀이 (72~120)";
+  const playerScore = score;
+  const elapsedTime = totalTime;
+
+  saveData(gameName, nameEntered, playerScore, elapsedTime);
+}
+
+/* 
+  ============================================
+  2) 서버 전송 함수 (주어진 코드)
+  ============================================
+*/
+function saveData(game, name, score, elapsedTime) {
+  const FUNCTION_URL = "https://us-central1-record-f420d.cloudfunctions.net/report";
+
+  const requestData = {
+    game,
+    name,
+    score: parseInt(score, 10),
+    elapsedTime: parseInt(elapsedTime, 10)
+  };
+
+  fetch(FUNCTION_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestData)
+  })
+  .then(async (response) => {
+    const responseData = await response.json();
+    if (response.ok) {
+      document.getElementById('response').innerText =
+        "성공: " + JSON.stringify(responseData, null, 2);
+    } else {
+      document.getElementById('response').innerText =
+        "오류: " + JSON.stringify(responseData, null, 2);
+    }
+  })
+  .catch((error) => {
+    console.error('요청 실패:', error);
+    document.getElementById('response').innerText =
+      "네트워크 오류: " + error.message;
+  });
+}
+</script>
+
+</body>
+</html>
